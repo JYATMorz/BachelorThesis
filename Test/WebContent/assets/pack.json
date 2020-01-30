@@ -1,0 +1,27 @@
+{
+  "section1": {"files": [
+    {
+      "type": "animation",
+      "key": "animations",
+      "url": "assets/animations.json"
+    },
+    {
+      "type": "sceneFile",
+      "key": "Scene1",
+      "url": "assets/scenes/Scene1.js"
+    },
+    {
+      "type": "multiatlas",
+      "key": "textures",
+      "url": "assets/atlas/textures.json",
+      "path": "assets/atlas"
+    }
+  ]},
+  "meta": {
+    "generated": "1563370262414",
+    "app": "Phaser Editor 2D - Asset Pack Editor - 2.1.3",
+    "contentType": "Phaser v3 Asset Pack",
+    "url": "https://phasereditor2d.com",
+    "version": "2"
+  }
+}
