@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>Test</name>
+	<name>GitTest</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -16,7 +16,7 @@
 	</natures>
 	<filteredResources>
 		<filter>
-			<id>1580416864802</id>
+			<id>1580417725134</id>
 			<name></name>
 			<type>26</type>
 			<matcher>
@@ -25,7 +25,7 @@
 			</matcher>
 		</filter>
 		<filter>
-			<id>1580416864819</id>
+			<id>1580417725172</id>
 			<name></name>
 			<type>26</type>
 			<matcher>
@@ -34,7 +34,7 @@
 			</matcher>
 		</filter>
 		<filter>
-			<id>1580416864836</id>
+			<id>1580417725190</id>
 			<name></name>
 			<type>26</type>
 			<matcher>
@@ -43,7 +43,7 @@
 			</matcher>
 		</filter>
 		<filter>
-			<id>1580416864849</id>
+			<id>1580417725221</id>
 			<name></name>
 			<type>22</type>
 			<matcher>

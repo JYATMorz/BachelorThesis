@@ -2,12 +2,13 @@
 window.addEventListener('load', function() {
 
 	var game = new Phaser.Game({
-    "title": "Test",
+    "title": "GitTest",
     "width": 800,
     "height": 450,
     "type": Phaser.AUTO,
     "backgroundColor": "#88F",
     "parent": "game-container",
+    "physics": {"default": "arcade"},
     "scale": {
         "mode": Phaser.Scale.FIT,
         "autoCenter": Phaser.Scale.CENTER_BOTH

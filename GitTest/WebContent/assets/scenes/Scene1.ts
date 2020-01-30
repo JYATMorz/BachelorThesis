@@ -7,7 +7,7 @@ class Scene1 extends Phaser.Scene {
 	
 	constructor() {
 	
-		super('Scene1');
+		super("Scene1");
 		
 	}
 	
@@ -23,6 +23,7 @@ class Scene1 extends Phaser.Scene {
 	}
 
 	update() {
+		
 	}
 
 
@@ -30,5 +31,3 @@ class Scene1 extends Phaser.Scene {
 }
 
 /* END OF COMPILED CODE */
-
-// You can write more code here
