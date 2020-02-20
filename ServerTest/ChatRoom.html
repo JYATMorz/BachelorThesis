@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chat Room Test</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<style>
+div {
+	border-style: solid;
+	border-width: 3px;
+	padding: 5px;
+	margin: 5px;
+}
+#content {
+	height: 500px;
+	overflow: scroll;
+}
+</style>
+</head>
+<body>
+	<div id="content">
+		<ol id="list">
+			
+		</ol>
+	</div>
+	<div id="typein">
+		<form action="http://127.0.0.1:8081/sending" method="POST" onsubmit="return getText();">
+			<textarea rows="10" cols="100" id="text" name="context" required></textarea>
+			<br />
+			<input type="submit" id="send" value="Send">
+			<button type="button" id="clear">Clear</button>
+		</form>
+	</div>
+</body>
+
+<script>
+	$(document).ready(function() {
+		$('#clear').click(function() {
+			$('#list').empty();
+		});
+	});
+	
+	function getText() {
+		var text = $('#text').val();
+		console.log(text);
+		var date1 = new Date();
+		var time = date1.getTime();
+		$.post("http://127.0.0.1:8081/sending", {
+			time : time,
+			content : text
+		}, function(data, status) {
+			var date2 = new Date();
+			var latency = date2.getTime() - data[1];
+			var countTime = data[0].toString()+", "+latency.toString();
+			addList(countTime);
+		});
+		
+		return false;
+	}
+	
+	function addList (newText) {
+		var newLine = $('<li></li>').text(newText);
+		$('#list').append(newLine);
+	}
+	
+</script>
+</html>
