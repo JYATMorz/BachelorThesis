@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chat Room Test</title>
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<style>
+div {
+	border-style: solid;
+	border-width: 3px;
+	padding: 5px;
+	margin: 5px;
+}
+
+#content {
+	height: 500px;
+	overflow: scroll;
+}
+</style>
+</head>
+<body>
+	<div id="content">
+		<ol id="list">
+
+		</ol>
+	</div>
+	<div id="typein">
+		<form enctype="multipart/form-data" method="POST" id="forms" onsubmit="return getText();">
+			<textarea rows="10" cols="100" id="text" name="content" required></textarea>
+			<br />
+			<input type="file" id="fileUpload" name="image">
+			<br />
+			<input type="submit" id="send" value="Send">
+			<button type="button" id="clear">Clear</button>
+		</form>
+	</div>
+</body>
+
+<script>
+	$(document).ready(function() {
+		$('#clear').click(function() {
+			$('#list').empty();
+		});
+	});
+
+	function getText() {
+		var text = $('#text').val();
+		var date1 = new Date();
+		var time = date1.getTime();
+		
+		var formdata = new FormData($("#forms")[0]);
+		formdata.append('time', time);
+		
+		$.ajax({
+		    url: '/sending',
+		    type: 'POST',
+		    cache: false,
+		    data: formdata,
+		    dataType: 'JSON',
+		    processData: false,
+		    contentType: false,
+		    success: function (data) {
+		    	var date2 = new Date();
+				var latency = date2.getTime() - data[1];
+				var countTime = data[0].toString() + ", " + latency.toString();
+
+				addList(countTime, "ELw55SlU0AIZl3T.png");
+		    }
+		});
+
+		return false;
+	}
+
+	function addList(newText, img) {
+		var newImg = $('<li></li>').html(
+				"<img src='" + img + "'alt='picture?' width='40'>, " + newText);
+
+		$('#list').append(newImg);
+	}
+</script>
+</html>
