@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>Chat Room Test</title>
-<script
-	src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <style>
 div {
 	border-style: solid;
@@ -38,6 +38,19 @@ div {
 </body>
 
 <script>
+	this.socket = io();
+	var date = new Date();
+	
+	document.cookie = "createtime=" + date.getTime();
+	
+	this.socket.on('messages', function (data) {
+		var date2 = new Date();
+		var latency = date2.getTime() - data[1];
+		var countTime = data[0].toString() + ", " + latency.toString();
+
+		addList(countTime, data[2]);
+	});
+
 	$(document).ready(function() {
 		$('#clear').click(function() {
 			$('#list').empty();
@@ -48,9 +61,10 @@ div {
 		var text = $('#text').val();
 		var date1 = new Date();
 		var time = date1.getTime();
-		
+
 		var formdata = new FormData($("#forms")[0]);
 		formdata.append('time', time);
+		formdata.append('pageid', document.cookie);
 		
 		$.ajax({
 		    url: '/sending',
@@ -60,21 +74,17 @@ div {
 		    dataType: 'JSON',
 		    processData: false,
 		    contentType: false,
-		    success: function (data) {
-		    	var date2 = new Date();
-				var latency = date2.getTime() - data[1];
-				var countTime = data[0].toString() + ", " + latency.toString();
-
-				addList(countTime, "ELw55SlU0AIZl3T.png");
-		    }
+		    success: function (data) {},
+		    error: function(err) {
+		        console.log(err);
+			}
 		});
 
 		return false;
 	}
 
-	function addList(newText, img) {
-		var newImg = $('<li></li>').html(
-				"<img src='" + img + "'alt='picture?' width='40'>, " + newText);
+	function addList(newText, id) {
+		var newImg = $('<li></li>').html("<b>" + id + "</b>: " + newText);
 
 		$('#list').append(newImg);
 	}
