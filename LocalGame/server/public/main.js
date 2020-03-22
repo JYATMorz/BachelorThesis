@@ -1,0 +1,28 @@
+window.addEventListener('load', function() {
+
+	var config = {
+		type: Phaser.AUTO,
+		width: 1200,
+		height: 600,
+		backgroundColor: 0xc4ba77,
+		physics: {
+			default: 'arcade',
+			arcade: {
+				gravity: {},
+				debug: true
+			}
+		},
+		// fps: {
+	  //   target: 60,
+	  //   forceSetTimeOut: true
+		// },
+		scale: {
+			mode: Phaser.Scale.FIT,
+			autoCenter: Phaser.Scale.CENTER_BOTH
+		},
+		scene: [LoginPage, PlayGame]
+	};
+
+	var game = new Phaser.Game(config);
+
+});
