@@ -18,7 +18,7 @@ class PlayGame extends Phaser.Scene {
 	create() {
 		this.ball = new Ball(this, this.playground);
     this.add.graphics().lineStyle(5, 0x00ffff, 0.8)
-        .strokeRectShape(this.ball.body.customBoundsRectangle)
+        .strokeRectShape(this.ball.body.customBoundsRectangle);
 
     this.players = new Array();
 		this.players[0] = new PlayerTeam(this, this.playground, 0);

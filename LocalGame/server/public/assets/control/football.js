@@ -18,6 +18,5 @@ class Ball extends Phaser.Physics.Arcade.Image {
 		this.body.setDrag(0.99);
 		this.body.setMaxSpeed(1000);
 
-    // this.body.setVelocity(1000, 400);
   }
 }
