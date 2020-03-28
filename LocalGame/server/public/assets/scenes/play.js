@@ -13,6 +13,7 @@ class PlayGame extends Phaser.Scene {
 	preload() {
 		this.load.image('ball', 'assets/image/ball.png');
 		this.load.image('player', 'assets/image/player.png');
+    this.load.image('arrow', 'assets/image/arrow.png');
 	}
 
 	create() {
