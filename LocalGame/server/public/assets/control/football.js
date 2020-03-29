@@ -18,9 +18,5 @@ class Ball extends Phaser.Physics.Arcade.Image {
 		this.body.setDrag(0.99);
 		this.body.setMaxSpeed(2000);
 
-    this.setInteractive(new Phaser.Geom.Circle(50, 50, 50), Phaser.Geom.Circle.Contains);
-    this.on('pointerup',  function(){
-      this.body.setVelocity(1000, 1000);
-    });
   }
 }
