@@ -6,6 +6,7 @@ class PlayGame extends Phaser.Scene {
   init() {
     this.gameStart = false;
     this.gameTurn = 0;
+    this.nextRound = false;
     this.playground = {
       x: 200, y: 150, width: 800, height: 400,
       position: {a: 0.175, b: 0.325, c: 0.675, d: 0.825}
@@ -14,6 +15,7 @@ class PlayGame extends Phaser.Scene {
       fontSize: '36px',
       backgroundColor: '#31b696'
     };
+    this.shootSpeed = 800;
   }
 
 	preload() {
@@ -24,7 +26,7 @@ class PlayGame extends Phaser.Scene {
 
 	create() {
     this.ball = new Ball(this, this.playground);
-    this.add.graphics().lineStyle(5, 0x00ffff, 0.8)
+    this.add.graphics().lineStyle(5, 0xffffff, 1)
         .strokeRectShape(this.ball.body.customBoundsRectangle);
 
     this.players = new Array();
@@ -50,13 +52,8 @@ class PlayGame extends Phaser.Scene {
     this.shootText.on('pointerup', function() {
       if (this.gameStart) {
         var currentTeamNum = this.gameTurn % 4;
-        var nextTeamNum = (this.gameTurn + 1) % 4;
-
-        this.players[currentTeamNum].shoot();
-
-        this.players[nextTeamNum].isTheSelectedTeam();
-        this.gameTurn ++;
-        this.startText.setText('Team:' + (nextTeamNum + 1).toString());
+        this.players[currentTeamNum].shoot(this.shootSpeed);
+        this.nextRound = true;
       }
     }, this);
 	}
@@ -64,11 +61,24 @@ class PlayGame extends Phaser.Scene {
 	update() {
     this.ball.body.rotation += this.ball.body.speed / 100;
 
+    var movingImgs = 0;
     this.players.forEach((team, i) => {
       team.getChildren().forEach((player, j) => {
+
         player.updateNameLocation(player.x, player.y);
+
+        if (player.body.speed > 0) {
+          movingImgs ++;
+        }
       });
     });
+    if (this.nextRound && movingImgs === 0) {
+      this.nextRound = false;
+      var nextTeamNum = (this.gameTurn + 1) % 4;
+      this.players[nextTeamNum].isTheSelectedTeam();
+      this.gameTurn ++;
+      this.startText.setText('Team:' + (nextTeamNum + 1).toString());
+    }
 
 	}
 

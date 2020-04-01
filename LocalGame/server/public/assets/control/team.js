@@ -83,13 +83,13 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     var stepX
     switch (num) {
     case 0:
-      stepX = position.a;
-      break;
-    case 1:
       stepX = position.b;
       break;
-    case 2:
+    case 1:
       stepX = position.c;
+      break;
+    case 2:
+      stepX = position.a;
       break;
     case 3:
       stepX = position.d;
@@ -107,12 +107,18 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     this.isSelectedTeam = true;
   }
 
-  shoot() {
+  shoot(normalSpeed) {
     this.arrow.setVisible(false);
     this.getChildren().forEach((player, i) => {
       if (player.isSelectedPlayer) {
-        player.body.setVelocity(1000, 200);
+        var angle = this.arrow.rotation;
+        var force = normalSpeed * this.arrow.scaleX;
+        var speed = new Phaser.Math.Vector2();
 
+        speed.setToPolar(angle, force);
+        player.body.setVelocity(speed.x, speed.y);
+
+        player.isSelectedPlayer = false;
       }
     });
     this.isSelectedTeam = false;
