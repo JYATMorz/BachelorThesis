@@ -2,31 +2,36 @@ class PlayerTeam extends Phaser.GameObjects.Group {
   constructor(scene, playground, num) {
     super(scene, { max: 2 });
 
-    var stepX = this.stepPosition(playground.position, num);
+    var teamConfig = this.stepPosition(playground, num);
+    var stepX = teamConfig.stepX;
     var stepY = Math.floor(Math.random() * 100 * 0.15 ) / 100 + 0.25;
 
     this.arrow = scene.add.image(playground.x, playground.y, 'arrow').setOrigin(0, 0.5).setVisible(false);
     this.arrow.setInteractive();
 
+    this.teamNum = num;
     this.isSelectedTeam = false;
+    this.userSocketId = null;
 
     this.playerUp = new SoccerPlayer(scene,
       playground.x + playground.width * stepX,
       playground.y + playground.height * stepY,
       playground);
+    this.playerUp.setTintFill(teamConfig.tint);
     this.playerDown = new SoccerPlayer(scene,
       playground.x + playground.width * stepX,
       playground.y + playground.height * (1 - stepY),
       playground);
+    this.playerDown.setTintFill(teamConfig.tint);
 
-    this.selectPlayer(this.playerUp, scene);
-    this.selectPlayer(this.playerDown, scene);
+    this.selectPlayer(this.playerUp, scene, num % 2);
+    this.selectPlayer(this.playerDown, scene, num % 2);
     this.add(this.playerUp);
     this.add(this.playerDown);
     this.updateNameText('Team' + (num + 1).toString());
   }
 
-  selectPlayer(player, scene) {
+  selectPlayer(player, scene, rot) {
     player.on('pointerup',  function() {
       if (this.isSelectedTeam) {
         if (player === this.playerUp) {
@@ -39,6 +44,7 @@ class PlayerTeam extends Phaser.GameObjects.Group {
           console.log('Error at team.js:32');
         }
         this.adjustForce(player, scene, this.arrow);
+        this.arrow.setScale(1).setRotation(- Math.PI * rot);
       }
     }, this);
   }
@@ -71,31 +77,35 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     });
 
     scene.input.on('pointerup', function(pointer) {
-      scene.input.mouse.releasePointerLock();
       centerX = player.x + arrow.width;
       centerY = player.y;
+      scene.input.mouse.releasePointerLock();
     });
 
     arrow.setVisible(true);
   }
 
-  stepPosition(position, num) {
-    var stepX
+  stepPosition(playground, num) {
+    var differTeam = {};
     switch (num) {
     case 0:
-      stepX = position.b;
+      differTeam.stepX = playground.position.b;
+      differTeam.tint = playground.tintColor.blue;
       break;
     case 1:
-      stepX = position.c;
+      differTeam.stepX = playground.position.c;
+      differTeam.tint = playground.tintColor.red;
       break;
     case 2:
-      stepX = position.a;
+      differTeam.stepX = playground.position.a;
+      differTeam.tint = playground.tintColor.blue;
       break;
     case 3:
-      stepX = position.d;
+      differTeam.stepX = playground.position.d;
+      differTeam.tint = playground.tintColor.red;
       break;
     }
-    return stepX;
+    return differTeam;
   }
 
   updateNameText(nickname) {
@@ -107,21 +117,23 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     this.isSelectedTeam = true;
   }
 
-  shoot(normalSpeed) {
+  shoot(shootSpeed, socket) {
     this.arrow.setVisible(false);
     this.getChildren().forEach((player, i) => {
       if (player.isSelectedPlayer) {
         var angle = this.arrow.rotation;
-        var force = normalSpeed * this.arrow.scaleX;
+        var force = shootSpeed * this.arrow.scaleX;
         var speed = new Phaser.Math.Vector2();
-
         speed.setToPolar(angle, force);
-        player.body.setVelocity(speed.x, speed.y);
 
-        player.isSelectedPlayer = false;
+        socket.emit('toShootBall', {
+          socketID: this.userSocketId,
+          teamID: this.teamNum,
+          playerID: i,
+          speed: speed
+        });
       }
     });
-    this.isSelectedTeam = false;
   }
 
 }
