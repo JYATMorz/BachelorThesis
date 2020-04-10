@@ -31,7 +31,7 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     this.updateNameText('Team' + (num + 1).toString());
   }
 
-  selectPlayer(player, scene, rot) {
+  selectPlayer(player, scene, rotate) {
     player.on('pointerup',  function() {
       if (this.isSelectedTeam) {
         if (player === this.playerUp) {
@@ -44,7 +44,7 @@ class PlayerTeam extends Phaser.GameObjects.Group {
           console.log('Error at team.js:32');
         }
         this.adjustForce(player, scene, this.arrow);
-        this.arrow.setScale(1).setRotation(- Math.PI * rot);
+        this.arrow.setScale(1).setRotation(- Math.PI * rotate);
       }
     }, this);
   }
@@ -61,8 +61,8 @@ class PlayerTeam extends Phaser.GameObjects.Group {
 
     scene.input.on('pointermove', function(pointer) {
       if (scene.input.mouse.locked) {
-        centerX += pointer.movementX;
-        centerY += pointer.movementY;
+        centerX += 2 * pointer.movementX;
+        centerY += 2 * pointer.movementY;
         arrow.setRotation(Phaser.Math.Angle.Between(player.x, player.y, centerX, centerY));
 
         var distance = Phaser.Math.Distance.Between(player.x, player.y, centerX, centerY) / 100;
@@ -120,7 +120,7 @@ class PlayerTeam extends Phaser.GameObjects.Group {
   shoot(shootSpeed, socket) {
     this.arrow.setVisible(false);
     this.getChildren().forEach((player, i) => {
-      if (player.isSelectedPlayer) {
+      if (player.isSelectedPlayer && socket.id === this.userSocketId) {
         var angle = this.arrow.rotation;
         var force = shootSpeed * this.arrow.scaleX;
         var speed = new Phaser.Math.Vector2();

@@ -59,14 +59,15 @@ class PlayGame extends Phaser.Scene {
     }, this);
 
     this.socket.on('firstUser', function(callback) {
-      var teamsData = {};
+      // wait until (this.nextRound === false)
 
+      var teamsData = {};
       teamsData.position =
         [ [[[], []], [[], []]],
           [[[], []], [[], []]],
           [[[], []], [[], []]],
           [[[], []], [[], []]],
-          [[],[]]];
+          [[],[]] ];
       self.players.forEach((team, i) => {
         team.getChildren().forEach((player, j) => {
           teamsData.position[i][j][0] = player.x;
@@ -76,8 +77,6 @@ class PlayGame extends Phaser.Scene {
       teamsData.position[4][0] = self.ball.x;
       teamsData.position[4][1] = self.ball.y;
 
-      // should be added by server for safety issues
-      
       callback(teamsData);
     });
 
@@ -106,24 +105,14 @@ class PlayGame extends Phaser.Scene {
       self.gameStart = true;
     });
 
-    this.socket.on('currentStates', function(users) {
+    this.socket.once('currentStates', function(users) {
       users.forEach((user, i) => {
-        var teamNumber = user.team.teamNum;
-        if (self.players[teamNumber].userSocketId === null) {
-          self.players[teamNumber].userSocketId = user.userID;
-          // update user name here
-        }
-        /* cancel the comment after determine the position upload method
-        if (user.team.player1.x !== null && user.team.player1.y !== null) {
-          self.players[teamNumber].playerUp.setPosition(
-            user.team.player1.x, user.team.player1.y);
-        }
-        if (user.team.player2.x !== null && user.team.player2.y !== null) {
-          self.players[teamNumber].playerUp.setPosition(
-            user.team.player2.x, user.team.player2.y);
-        }
-        */
+        self.updateUser(user);
       });
+    });
+
+    this.socket.on('newUser', function(user) {
+      self.updateUser(user);
     });
 
     this.socket.on('over4', function(id) {
@@ -131,6 +120,10 @@ class PlayGame extends Phaser.Scene {
         // solve problem: 4 more users (dom window alert?)
         console.log('Noooooo Mooooooore Plaaaaaaayers !!!!!!!!');
       }
+    });
+
+    this.socket.on('playerDown', function(teamNum) {
+      self.players[teamNum].userSocketId = null;
     });
 
     this.socket.on('shootingBall', function(playerData) {
@@ -193,5 +186,15 @@ class PlayGame extends Phaser.Scene {
       });
       scene.physics.add.collider(aTeam, ballImage);
     });
+  }
+
+  updateUser(user) {
+    var teamNumber = user.team.teamNum;
+    if (this.players[teamNumber].userSocketId === null) {
+      this.players[teamNumber].userSocketId = user.userID;
+      // update user name here
+    } else {
+      console.log('ErroR: ' + user)
+    }
   }
 }

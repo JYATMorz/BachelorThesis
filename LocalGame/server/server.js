@@ -35,8 +35,11 @@ io.on('connection', function(socket) {
 
   if (userNum < 4) {
     userNum ++;
+
+    var tempUID;
     for (var i = 0; i < users.length; i++) {
       if (users[i].userID === null) {
+        tempUID = i;
         users[i].userID = socket.id;
         break;
       }
@@ -48,21 +51,21 @@ io.on('connection', function(socket) {
         gameTurn: gameStatus.gameTurn,
         nextRound: false
       };
-      console.log(teamsData);
       socket.emit('loadData', teamsData);
     });
+
+    socket.emit('currentStates', users);
+    socket.broadcast.emit('newUser', users[tempUID]);
   } else {
     console.log("Toooooo many players !!!!");
     socket.emit('over4', socket.id);
   }
 
-  socket.emit('currentStates', users);
-  socket.broadcast.emit('newUser', users[socket.id]);
-
   socket.on('disconnect', function() {
     console.log('...Disconnected...');
     for (var i = 0; i < users.length; i++) {
       if (users[i].userID === socket.id) {
+        socket.broadcast.emit('playerDown', i);
         users.splice(i, 1, {
           userID: null,
           userName: 'Default',
@@ -74,6 +77,10 @@ io.on('connection', function(socket) {
         });
         userNum --;
       }
+    }
+    if (userNum === 0) {
+      gameStatus.gameTurn = 0;
+      gameStatus.gameStart = false;
     }
     io.emit('disconnect', socket.id);
   });
