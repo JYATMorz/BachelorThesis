@@ -4,19 +4,21 @@ class PlayGame extends Phaser.Scene {
   }
 
   init() {
+    this.waitStart = false;
     this.gameStart = false;
     this.gameTurn = 0;
-    this.nextRound = false;
+    this.waitNextTurn = false;
+    this.sendNextTurn = false;
     this.playground = {
       x: 200, y: 150, width: 800, height: 400,
       position: {a: 0.175, b: 0.325, c: 0.675, d: 0.825},
       tintColor: {blue: 0x1b2350, red: 0xd20808}
-    }
+    };
     this.generalFont = {
       fontSize: '36px',
-      backgroundColor: '#31b696'
+      backgroundColor: '#31b696',
+      align: 'center'
     };
-    this.shootSpeed = 800;
   }
 
 	preload() {
@@ -41,10 +43,11 @@ class PlayGame extends Phaser.Scene {
 
     this.checkCollision(this, this.players, this.ball);
 
-    this.startText = this.add.text(20, 500, 'Start !', this.generalFont);
+    this.startText = this.add.text(20, 500, 'Start !\n0/4', this.generalFont);
     this.startText.setInteractive();
     this.startText.on('pointerup', function() {
-      if (!this.gameStart) {
+      if (!this.gameStart && !this.waitStart) {
+        this.waitStart = true;
         this.socket.emit('toStartGame');
       }
     }, this);
@@ -54,28 +57,17 @@ class PlayGame extends Phaser.Scene {
     this.shootText.on('pointerup', function() {
       if (this.gameStart) {
         var currentTeamNum = this.gameTurn % 4;
-        this.players[currentTeamNum].shoot(this.shootSpeed, this.socket);
+        this.players[currentTeamNum].shoot(this.socket);
       }
     }, this);
 
+    // title, score, notification text
+
     this.socket.on('firstUser', function(callback) {
-      // wait until (this.nextRound === false)
+      // wait until (this.waitNextTurn === false)
 
       var teamsData = {};
-      teamsData.position =
-        [ [[[], []], [[], []]],
-          [[[], []], [[], []]],
-          [[[], []], [[], []]],
-          [[[], []], [[], []]],
-          [[],[]] ];
-      self.players.forEach((team, i) => {
-        team.getChildren().forEach((player, j) => {
-          teamsData.position[i][j][0] = player.x;
-          teamsData.position[i][j][1] = player.y;
-        });
-      });
-      teamsData.position[4][0] = self.ball.x;
-      teamsData.position[4][1] = self.ball.y;
+      teamsData.position = self.getAllPosition();
 
       callback(teamsData);
     });
@@ -91,11 +83,19 @@ class PlayGame extends Phaser.Scene {
 
       self.gameStart = initData.status.gameStart;
       self.gameTurn = initData.status.gameTurn;
-      self.nextRound = initData.status.nextRound;
+      self.waitNextTurn = initData.status.waitNextTurn;
 
       if (self.gameStart) {
         self.players[self.gameTurn % 4].isTheSelectedTeam();
         self.startText.setText('Team:' + ((self.gameTurn % 4) + 1).toString());
+      }
+    });
+
+    this.socket.on('waitingGame', function(allStartReady) {
+      if (self.waitStart) {
+        self.startText.setText('Waiting\n' + allStartReady + '/4');
+      } else {
+        self.startText.setText('Start !\n' + allStartReady + '/4');
       }
     });
 
@@ -123,13 +123,13 @@ class PlayGame extends Phaser.Scene {
     });
 
     this.socket.on('playerDown', function(teamNum) {
-      self.players[teamNum].userSocketId = null;
+      self.players[teamNum].userSocketID = null;
     });
 
     this.socket.on('shootingBall', function(playerData) {
       self.players.forEach((team, i) => {
         if (
-          (playerData.socketID !== null && team.userSocketId === playerData.socketID) ||
+          (playerData.socketID !== null && team.userSocketID === playerData.socketID) ||
           (playerData.socketID === null && i === playerData.teamID)
         ) {
           team.arrow.setVisible(false);
@@ -137,16 +137,24 @@ class PlayGame extends Phaser.Scene {
             .body.setVelocity(playerData.speed.x, playerData.speed.y);
           team.getChildren()[playerData.playerID].isSelectedPlayer = false;
           team.isSelectedTeam = false;
-          // self.gameTurn = playerData.gameTurn;
-          self.nextRound = playerData.nextRound;
+          self.waitNextTurn = playerData.waitNextTurn /*true*/;
         }
       });
     });
 
+    this.socket.on('goNextRound', function(gameStatus) {
+      self.waitNextTurn = gameStatus.waitNextTurn;
+      self.gameTurn = gameStatus.gameTurn;
+      var nextTeamNum = self.gameTurn % 4;
+      self.players[nextTeamNum].isTheSelectedTeam();
+      self.startText.setText('Team:' + (nextTeamNum + 1).toString());
+      self.sendNextTurn = false;
+    });
+
     this.socket.on('disconnect', function(socketID) {
       self.players.forEach((team, i) => {
-        if (team.userSocketId === socketID) {
-          team.userSocketId = null;
+        if (team.userSocketID === socketID) {
+          team.userSocketID = null;
         }
       });
     });
@@ -155,27 +163,7 @@ class PlayGame extends Phaser.Scene {
 	update() {
     this.ball.body.rotation += this.ball.body.speed / 100;
 
-    var movingImgs = 0;
-    if (this.ball.body.speed > 0.2) {
-      movingImgs ++;
-    }
-    this.players.forEach((team, i) => {
-      team.getChildren().forEach((player, j) => {
-
-        player.updateNameLocation(player.x, player.y);
-
-        if (player.body.speed > 0.2) {
-          movingImgs ++;
-        }
-      });
-    });
-    if (this.nextRound && movingImgs === 0) {
-      this.nextRound = false;
-      var nextTeamNum = (this.gameTurn + 1) % 4;
-      this.players[nextTeamNum].isTheSelectedTeam();
-      this.gameTurn ++;
-      this.startText.setText('Team:' + (nextTeamNum + 1).toString());
-    }
+    this.noMovingImgs();
 
 	}
 
@@ -190,11 +178,55 @@ class PlayGame extends Phaser.Scene {
 
   updateUser(user) {
     var teamNumber = user.team.teamNum;
-    if (this.players[teamNumber].userSocketId === null) {
-      this.players[teamNumber].userSocketId = user.userID;
+    if (this.players[teamNumber].userSocketID === null) {
+      this.players[teamNumber].userSocketID = user.userSocketID;
       // update user name here
     } else {
       console.log('ErroR: ' + user)
     }
+  }
+
+  noMovingImgs() {
+    var movingImgs = 0;
+    if (this.ball.body.speed > 0.2) {
+      movingImgs ++;
+    }
+    this.players.forEach((team, i) => {
+      team.getChildren().forEach((player, j) => {
+
+        player.updateNameLocation(player.x, player.y);
+
+        if (player.body.speed > 0.2) {
+          movingImgs ++;
+        }
+      });
+    });
+    if (this.waitNextTurn && movingImgs === 0) {
+      // send position and socket id to server for verification
+      var endTurnData = this.getAllPosition();
+      if (!this.sendNextTurn) {
+        this.socket.emit('toNextRound', endTurnData);
+        this.sendNextTurn = true;
+      }
+    }
+  }
+
+  getAllPosition() {
+    var position =
+      [ [[], []], // team0: player1[x,y], player2[x,y]
+        [[], []], // team1: player1[x,y], player2[x,y]
+        [[], []], // team2: player1[x,y], player2[x,y]
+        [[], []], // team3: player1[x,y], player2[x,y]
+        [] ];            // ball: x,y
+    this.players.forEach((team, i) => {
+      team.getChildren().forEach((player, j) => {
+        position[i][j][0] = player.x;
+        position[i][j][1] = player.y;
+      });
+    });
+    position[4][0] = this.ball.x;
+    position[4][1] = this.ball.y;
+
+    return position;
   }
 }

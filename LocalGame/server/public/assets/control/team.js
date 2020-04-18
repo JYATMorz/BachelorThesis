@@ -11,7 +11,7 @@ class PlayerTeam extends Phaser.GameObjects.Group {
 
     this.teamNum = num;
     this.isSelectedTeam = false;
-    this.userSocketId = null;
+    this.userSocketID = null;
 
     this.playerUp = new SoccerPlayer(scene,
       playground.x + playground.width * stepX,
@@ -89,19 +89,19 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     var differTeam = {};
     switch (num) {
     case 0:
-      differTeam.stepX = playground.position.b;
-      differTeam.tint = playground.tintColor.blue;
-      break;
-    case 1:
-      differTeam.stepX = playground.position.c;
-      differTeam.tint = playground.tintColor.red;
-      break;
-    case 2:
       differTeam.stepX = playground.position.a;
       differTeam.tint = playground.tintColor.blue;
       break;
-    case 3:
+    case 1:
       differTeam.stepX = playground.position.d;
+      differTeam.tint = playground.tintColor.red;
+      break;
+    case 2:
+      differTeam.stepX = playground.position.b;
+      differTeam.tint = playground.tintColor.blue;
+      break;
+    case 3:
+      differTeam.stepX = playground.position.c;
       differTeam.tint = playground.tintColor.red;
       break;
     }
@@ -117,17 +117,17 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     this.isSelectedTeam = true;
   }
 
-  shoot(shootSpeed, socket) {
+  shoot(socket) {
     this.arrow.setVisible(false);
     this.getChildren().forEach((player, i) => {
-      if (player.isSelectedPlayer && socket.id === this.userSocketId) {
+      if (player.isSelectedPlayer && socket.id === this.userSocketID) {
         var angle = this.arrow.rotation;
-        var force = shootSpeed * this.arrow.scaleX;
+        var force = this.arrow.scaleX;
         var speed = new Phaser.Math.Vector2();
         speed.setToPolar(angle, force);
 
         socket.emit('toShootBall', {
-          socketID: this.userSocketId,
+          socketID: this.userSocketID,
           teamID: this.teamNum,
           playerID: i,
           speed: speed
