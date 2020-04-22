@@ -7,6 +7,7 @@ var userNum = 0;
 var gameStatus = {
   gameStart: false,
   gameTurn: 0,
+  gameScore: {blue: 0, red: 0},
   waitNextTurn: false
 };
 const shootSpeed = 800;
@@ -23,6 +24,7 @@ for (var i = 0; i < 4; i++) {
     },
     startReady: false,
     turnReady: false,
+    goalMessage: null,
     position: null
   });
 }
@@ -49,14 +51,20 @@ io.on('connection', function(socket) {
       }
     }
 
-    io.sockets.connected[users[0].userSocketID].emit('firstUser', function(teamsData) {
-      teamsData.status = {
-        gameStart: gameStatus.gameStart,
-        gameTurn: gameStatus.gameTurn,
-        waitNextTurn: false
-      };
-      socket.emit('loadData', teamsData);
-    });
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].userSocketID !== null) {
+        io.sockets.connected[users[i].userSocketID].emit('firstUser', function(teamsData) {
+          teamsData.status = {
+            gameStart: gameStatus.gameStart,
+            gameTurn: gameStatus.gameTurn,
+            gameScore: gameStatus.gameScore,
+            waitNextTurn: false
+          };
+          socket.emit('loadData', teamsData);
+        });
+        break;
+      }
+    }
 
     socket.emit('currentStates', users);
     socket.broadcast.emit('newUser', users[tempUID]);
@@ -77,7 +85,11 @@ io.on('connection', function(socket) {
             teamNum: i,
             player1: {x: null, y: null},
             player2: {x: null, y: null}
-          }
+          },
+          startReady: false,
+          turnReady: false,
+          goalMessage: null,
+          position: null
         });
         userNum --;
       }
@@ -85,6 +97,8 @@ io.on('connection', function(socket) {
     if (userNum === 0) {
       gameStatus.gameTurn = 0;
       gameStatus.gameStart = false;
+      gameStatus.gameScore = {blue: 0, red: 0},
+      gameStatus.waitNextTurn = false;
     }
     io.emit('disconnect', socket.id);
   });
@@ -105,6 +119,9 @@ io.on('connection', function(socket) {
     if (allStartReady === 4) {
       gameStatus.gameStart = true;
       io.sockets.emit('startingGame');
+      users.forEach((user, i) => {
+        user.startReady = false;
+      });
     } else {
       io.sockets.emit('waitingGame', allStartReady);
     }
@@ -112,8 +129,6 @@ io.on('connection', function(socket) {
 
   socket.on('toShootBall', function(playerData) {
     gameStatus.waitNextTurn = true;
-
-    // check data before broadcast !!!
     playerData.speed.x *= shootSpeed;
     playerData.speed.y *= shootSpeed;
     playerData.waitNextTurn = gameStatus.waitNextTurn;
@@ -126,13 +141,11 @@ io.on('connection', function(socket) {
       if (user.userSocketID === socket.id) {
         user.position = endTurnData;
         user.turnReady = true;
-      } else {
-        if (user.userSocketID === null) {
-          user.position = endTurnData;
-          user.turnReady = true;
-        }
-        allTurnReady = allTurnReady && (user.turnReady || (user.userSocketID === null));
+      } else if (user.userSocketID === null) {
+        user.position = endTurnData;
+        user.turnReady = true;
       }
+      allTurnReady = allTurnReady && user.turnReady;
     });
 
     // check all clients position
@@ -141,6 +154,10 @@ io.on('connection', function(socket) {
       gameStatus.gameTurn ++;
       gameStatus.waitNextTurn = false;
       io.sockets.emit('goNextRound', gameStatus);
+
+      users.forEach((user, i) => {
+        user.turnReady = false;
+      });
 
       // check whether next turn has player, if not, use AI to emit 'shootingBall'
       var teamNum = gameStatus.gameTurn % 4;
@@ -161,7 +178,45 @@ io.on('connection', function(socket) {
     }
   });
 
+  socket.on('toGoal', function(teamString) {
+    var allGoalMessage = true;
+    users.forEach((user, i) => {
+      if (user.userSocketID === socketID) {
+        user.goalMessage = teamString;
+      } else if (user.userSocketID === null) {
+        user.goalMessage = teamString;
+      }
+      allGoalMessage = allGoalMessage && (user.goalMessage !== null);
+    });
 
+    if (allGoalMessage) {
+      // check uploaded score content
+      var redNum = 0;
+      var blueNum = 0;
+      users.forEach((user, i) => {
+        if (user.goalMessage === 'red') {
+          redNum ++;
+        } else if (user.goalMessage === 'blue') {
+          blueNum ++;
+        }
+      });
+      // request improvement
+      if (redNum > blueNum) {
+        gameStatus.gameScore.red ++;
+      } else if (redNum < blueNum) {
+        gameStatus.gameScore.blue ++;
+      } else {
+        console.log('Error: Both Team Goal');
+        gameStatus.gameScore.blue ++;
+      }
+
+      gameStatus.rndStepY = Math.floor(Math.random() * 100 * 0.15 ) / 100 + 0.25;
+      io.sockets.emit('afterGoal', gameStatus);
+      users.forEach((user, i) => {
+        user.goalMessage = false;
+      });
+    }
+  });
 });
 
 server.listen(8081, function() {

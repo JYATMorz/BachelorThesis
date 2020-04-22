@@ -1,7 +1,6 @@
-class PlayerTeam extends Phaser.GameObjects.Group {
-  constructor(scene, playground, num) {
-    super(scene, { max: 2 });
+class PlayerTeam {
 
+  constructor(scene, playground, num) {
     var teamConfig = this.stepPosition(playground, num);
     var stepX = teamConfig.stepX;
     var stepY = Math.floor(Math.random() * 100 * 0.15 ) / 100 + 0.25;
@@ -26,9 +25,11 @@ class PlayerTeam extends Phaser.GameObjects.Group {
 
     this.selectPlayer(this.playerUp, scene, num % 2);
     this.selectPlayer(this.playerDown, scene, num % 2);
-    this.add(this.playerUp);
-    this.add(this.playerDown);
     this.updateNameText('Team' + (num + 1).toString());
+  }
+
+  getChildren() {
+    return [this.playerUp, this.playerDown];
   }
 
   selectPlayer(player, scene, rotate) {
@@ -50,22 +51,21 @@ class PlayerTeam extends Phaser.GameObjects.Group {
   }
 
   adjustForce(player, scene, arrow) {
-    var centerX = player.x + arrow.width;
-    var centerY = player.y;
+    var adjusting = false;
 
     arrow.setPosition(player.x, player.y);
 
     arrow.on('pointerdown', function(pointer) {
-      scene.input.mouse.requestPointerLock();
+      adjusting = true;
     });
 
     scene.input.on('pointermove', function(pointer) {
-      if (scene.input.mouse.locked) {
-        centerX += 2 * pointer.movementX;
-        centerY += 2 * pointer.movementY;
-        arrow.setRotation(Phaser.Math.Angle.Between(player.x, player.y, centerX, centerY));
+      if (scene.input.activePointer.isDown && adjusting) {
+        arrow.setRotation(Phaser.Math.Angle.Between(
+          player.x, player.y, scene.input.activePointer.x, scene.input.activePointer.y));
 
-        var distance = Phaser.Math.Distance.Between(player.x, player.y, centerX, centerY) / 100;
+        var distance = Phaser.Math.Distance.Between(
+          player.x, player.y, scene.input.activePointer.x, scene.input.activePointer.y) / 100;
         if (distance < 0.5) {
           arrow.setScale(0.5, 1);
         } else if (distance > 2) {
@@ -77,9 +77,7 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     });
 
     scene.input.on('pointerup', function(pointer) {
-      centerX = player.x + arrow.width;
-      centerY = player.y;
-      scene.input.mouse.releasePointerLock();
+      adjusting = false;
     });
 
     arrow.setVisible(true);
@@ -113,10 +111,6 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     this.playerDown.name.setText(nickname + ' 2');
   }
 
-  isTheSelectedTeam() {
-    this.isSelectedTeam = true;
-  }
-
   shoot(socket) {
     this.arrow.setVisible(false);
     this.getChildren().forEach((player, i) => {
@@ -136,4 +130,15 @@ class PlayerTeam extends Phaser.GameObjects.Group {
     });
   }
 
+  resetPosition(playground, stepY, num) {
+    var stepX = this.stepPosition(playground, num).stepX;
+
+    playerUp.setPosition(playground.x + playground.width * stepX,
+      playground.y + playground.height * stepY);
+    playerUp.updateNameLocation(playerUp.x, playerUp.y);
+
+    playerDown.setPosition(layground.x + playground.width * stepX,
+      playground.y + playground.height * (1 - stepY));
+    playerDown.updateNameLocation(playerDown.x, playerDown.y);
+  }
 }

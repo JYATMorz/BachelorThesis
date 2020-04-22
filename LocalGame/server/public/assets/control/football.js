@@ -19,4 +19,9 @@ class Ball extends Phaser.Physics.Arcade.Image {
 		this.body.setMaxSpeed(2000);
 
   }
+
+  resetPosition(playground) {
+    this.setPosition(playground.x + playground.width / 2,
+      playground.y + playground.height / 2);
+  }
 }

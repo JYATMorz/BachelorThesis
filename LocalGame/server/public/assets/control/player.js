@@ -15,7 +15,7 @@ class SoccerPlayer extends Phaser.Physics.Arcade.Image {
       new Phaser.Geom.Rectangle(
         playground.x, playground.y, playground.width, playground.height));
     this.body.useDamping = true;
-    this.body.setDrag(0.96);
+    this.body.setDrag(0.97);
     this.body.setMaxSpeed(800);
 
     this.isSelectedPlayer = false;
