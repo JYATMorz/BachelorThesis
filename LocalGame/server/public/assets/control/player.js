@@ -1,4 +1,4 @@
-class SoccerPlayer extends Phaser.Physics.Arcade.Image {
+export default class SoccerPlayer extends Phaser.Physics.Arcade.Image {
 
   constructor(scene, x, y, playground) {
     super(scene, x, y, 'player');
@@ -22,7 +22,8 @@ class SoccerPlayer extends Phaser.Physics.Arcade.Image {
 
     this.setInteractive(new Phaser.Geom.Circle(50, 50, 50), Phaser.Geom.Circle.Contains);
 
-    this.name = scene.add.text(x, y - 0.5 * this.height, 'name').setOrigin(0.5, 0.5);
+    this.name = scene.add.bitmapText(x, y - 0.5 * this.height, 'bitter_bmf', 'name', 18)
+      .setOrigin(0.5).setTintFill(0xffffff);
   }
 
   updateNameLocation(newX, newY) {

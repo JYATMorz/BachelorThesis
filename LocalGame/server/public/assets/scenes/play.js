@@ -1,9 +1,15 @@
-class PlayGame extends Phaser.Scene {
+import Ball from '../control/football.js';
+import PlayerTeam from '../control/team.js';
+import PlayArea from '../control/playGround.js'
+
+export default class PlayGame extends Phaser.Scene {
   constructor() {
     super('playGame');
   }
 
-  init() {
+  init(data) {
+    this.myUsername = data.userName;
+
     this.waitStart = false;
     this.gameStart = false;
     this.gameTurn = 0;
@@ -31,6 +37,7 @@ class PlayGame extends Phaser.Scene {
     this.load.image('playground', 'assets/image/playground_1.png');
     this.load.image('goal', 'assets/image/playground_2.png');
     this.load.image('gate', 'assets/image/playground_3.png');
+    this.load.bitmapFont('bitter_bmf', 'assets/bitmapFont/bitter.png', 'assets/bitmapFont/bitter.xml');
 	}
 
 	create() {
@@ -56,7 +63,7 @@ class PlayGame extends Phaser.Scene {
     this.startText.on('pointerup', function() {
       if (!this.gameStart && !this.waitStart) {
         this.waitStart = true;
-        this.socket.emit('toStartGame');
+        this.socket.emit('toStartGame', this.waitStart);
       }
     }, this);
 
@@ -80,17 +87,8 @@ class PlayGame extends Phaser.Scene {
         align: 'center'
       });
 
-    this.titleText = this.add.text(20, 20, 'Simple\nFootball',
-      {
-        fontSize: '42px',
-        color: '#5c9533',
-        stroke: '#79a35b',
-        strokeThickness: 3,
-        fixedWidth: 200,
-        fixedHeight: 150,
-        align: 'center',
-        lineSpacing: 10
-      });
+    this.titleText = this.add.bitmapText(20, 20, 'bitter_bmf',
+      'Simple\nFootball', 42, 1).setTintFill(0x1c3d50);
 
     this.noteText = this.add.text(1025, 25, 'no new message',
       {
@@ -103,39 +101,45 @@ class PlayGame extends Phaser.Scene {
     this.noteText.setWordWrapWidth(150, true);
     this.graphics.strokeRectShape(this.noteText.getBounds()).lineStyle(3, 0xffffff);
 
-    this.socket.on('firstUser', function(callback) {
-      // wait until (this.waitNextTurn === false)
+    this.socket.once('loginData', function(gameData, callback) {
+      var myTeamNum = gameData.teamNum;
+      var myGameData = {userName: self.myUsername, position: null};
 
-      var teamsData = {};
-      teamsData.position = self.getAllPosition();
+      self.updateGameStatus(gameData.gameStatus);
 
-      callback(teamsData);
-    });
-
-    this.socket.once('loadData', function(initData) {
-      self.players.forEach((team, i) => {
-        team.getChildren().forEach((player, j) => {
-          player.setPosition(initData.position[i][j][0], initData.position[i][j][1]);
-        });
-      });
-      self.ball.x = initData.position[4][0];
-      self.ball.y = initData.position[4][1];
-
-      self.gameStart = initData.status.gameStart;
-      self.gameTurn = initData.status.gameTurn;
-      self.gameScore = initData.status.gameScore;
-      self.waitNextTurn = initData.status.waitNextTurn;
-      self.scoreText.setText(this.gameScore.blue + ' < Blue : Red  > ' + this.gameScore.red);
+      if (gameData.requestPosition) {
+        myGameData.position = self.getAllPosition();
+      } else {
+        if (gameData.position !== null) {
+          self.setAllPosition(gameData.position);
+        } else {
+          console.log('Error: Where To Go ?!');
+        }
+      }
 
       if (self.gameStart) {
         self.players[self.gameTurn % 4].isSelectedTeam = true;
         self.startText.setText('Team:' + ((self.gameTurn % 4) + 1).toString());
-        if (self.socket.id === self.players[nextTeamNum].userSocketID) {
+        if (self.socket.id === self.players[self.gameTurn % 4].userSocketID) {
           self.noteText.setText('Your Turn');
         } else {
           self.noteText.setText("Other User's Turn");
         }
       }
+
+      callback(myGameData);
+    });
+
+    this.socket.once('currentStates', function(users) {
+      users.forEach((user, i) => {
+        self.updateUser(user);
+      });
+      self.noteText.setText('Game Loaded');
+    });
+
+    this.socket.on('newUser', function(user) {
+      self.updateUser(user);
+      self.noteText.setText('New User Connected');
     });
 
     this.socket.on('waitingGame', function(allStartReady) {
@@ -155,18 +159,6 @@ class PlayGame extends Phaser.Scene {
       self.noteText.setText('Game Start');
     });
 
-    this.socket.once('currentStates', function(users) {
-      users.forEach((user, i) => {
-        self.updateUser(user);
-      });
-      self.noteText.setText('Game Loaded');
-    });
-
-    this.socket.on('newUser', function(user) {
-      self.updateUser(user);
-      self.noteText.setText('New User Connected');
-    });
-
     this.socket.on('over4', function(id) {
       if (id === self.socket.id) {
         self.noteText.setText('Error:\nToo Many Users\nRetry Later');
@@ -175,6 +167,7 @@ class PlayGame extends Phaser.Scene {
 
     this.socket.on('playerDown', function(teamNum) {
       self.players[teamNum].userSocketID = null;
+      self.players[teamNum].updateNameText('Team' + (teamNum + 1));
       self.noteText.setText('One User Disconnected');
     });
 
@@ -194,6 +187,10 @@ class PlayGame extends Phaser.Scene {
       });
     });
 
+    this.socket.on('syncPosition', function(position) {
+      self.setAllPosition(position);
+    });
+
     this.socket.on('goNextRound', function(gameStatus) {
       self.waitNextTurn = gameStatus.waitNextTurn;
       self.gameTurn = gameStatus.gameTurn;
@@ -210,16 +207,12 @@ class PlayGame extends Phaser.Scene {
     });
 
     this.socket.on('afterGoal', function(gameStatus) {
-      self.resetAllPosition(self.playground, gameStatus.rndStepY);
+      setTimeout(function() {
+        self.resetAllPosition(self.playground, gameStatus.rndStepY);
+        self.noteText.setText('Game Resume');
+        self.updateGameStatus(gameStatus);
+      }, 5000);
 
-      self.gameStart = gameStatus.gameStart;
-      self.gameTurn = gameStatus.gameTurn;
-      self.gameScore = gameStatus.gameScore;
-      self.waitNextTurn = gameStatus.waitNextTurn;
-      self.scoreText.setText(this.gameScore.blue + ' < Blue : Red  > ' + this.gameScore.red);
-
-      self.players[(self.gameTurn % 4)].isSelectedTeam = true;
-      self.noteText.setText('Game Resume');
     });
 
     this.socket.on('disconnect', function(socketID) {
@@ -229,6 +222,7 @@ class PlayGame extends Phaser.Scene {
         }
       });
     });
+
 	}
 
 	update() {
@@ -250,12 +244,12 @@ class PlayGame extends Phaser.Scene {
     });
     scene.physics.add.collider(ball, doors.getDoorChildren());
 
-    scene.physics.add.collider(ball, doors.getGoalChildren().left, function(ball, leftDoor) {
+    scene.physics.add.overlap(ball, doors.getGoalChildren().left, function(ball, leftDoor) {
       if (scene.gameStart) {
         scene.playerGoal('red');
       }
     });
-    scene.physics.add.collider(ball, doors.getGoalChildren().right, function(ball, rightDoor) {
+    scene.physics.add.overlap(ball, doors.getGoalChildren().right, function(ball, rightDoor) {
       if (scene.gameStart) {
         scene.playerGoal('blue');
       }
@@ -267,9 +261,9 @@ class PlayGame extends Phaser.Scene {
     this.stopAllImages();
 
     if (teamString === 'blue') {
-      self.noteText.setText('Blue Team Goal');
+      this.noteText.setText('Blue Team Goal');
     } else if (teamString === 'red') {
-      self.noteText.setText('Red Team Goal');
+      this.noteText.setText('Red Team Goal');
     } else {
       console.log('Game Error! Unknown Team!');
     }
@@ -277,13 +271,21 @@ class PlayGame extends Phaser.Scene {
     this.socket.emit('toGoal', teamString);
   }
 
+  updateGameStatus(gameStatus) {
+    this.gameStart = gameStatus.gameStart;
+    this.gameTurn = gameStatus.gameTurn;
+    this.gameScore = gameStatus.gameScore;
+    this.waitNextTurn = gameStatus.waitNextTurn;
+    this.scoreText.setText(this.gameScore.blue + ' < Blue : Red  > ' + this.gameScore.red);
+  }
+
   updateUser(user) {
-    var teamNumber = user.team.teamNum;
+    var teamNumber = user.teamNum;
     if (this.players[teamNumber].userSocketID === null) {
       this.players[teamNumber].userSocketID = user.userSocketID;
-      // update user name here
+      this.players[teamNumber].updateNameText(user.userName);
     } else {
-      console.log('ErroR: ' + user)
+      console.log('Error: ' + user)
     }
   }
 
@@ -291,19 +293,22 @@ class PlayGame extends Phaser.Scene {
     var movingImgs = 0;
     if (this.ball.body.speed > 0.2) {
       movingImgs ++;
+    } else {
+      this.ball.setVelocity(0);
     }
     this.players.forEach((team, i) => {
       team.getChildren().forEach((player, j) => {
-
         player.updateNameLocation(player.x, player.y);
 
         if (player.body.speed > 0.2) {
           movingImgs ++;
+        } else {
+          player.setVelocity(0);
         }
       });
     });
     if (this.waitNextTurn && movingImgs === 0) {
-      var endTurnData = this.getAllPosition();
+      var endTurnData = {position: this.getAllPosition(), turnReady: true};
       if (!this.sendNextTurn) {
         this.socket.emit('toNextRound', endTurnData);
         this.sendNextTurn = true;
@@ -330,15 +335,13 @@ class PlayGame extends Phaser.Scene {
     return position;
   }
 
-  stopAllImages() {
-    this.ball.setVelocity(0);
+  setAllPosition(position) {
     this.players.forEach((team, i) => {
-      team.getChildren().forEach((player, i) => {
-        player.setVelocity(0);
-
+      team.getChildren().forEach((player, j) => {
+        player.setPosition(position[i][j][0], position[i][j][1]);
       });
-      team.isSelectedTeam = false;
     });
+    this.ball.setPosition(position[4][0], position[4][1]);
   }
 
   resetAllPosition(playground, stepY) {
@@ -347,4 +350,17 @@ class PlayGame extends Phaser.Scene {
       team.resetPosition(playground, stepY, i);
     });
   }
+
+  stopAllImages() {
+    this.ball.body.stop();
+    this.players.forEach((team, i) => {
+      team.getChildren().forEach((player, i) => {
+        player.body.stop();
+      });
+      team.isSelectedTeam = false;
+    });
+  }
+
+
+
 }

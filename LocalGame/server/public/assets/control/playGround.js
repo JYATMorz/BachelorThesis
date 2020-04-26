@@ -1,4 +1,4 @@
-class PlayArea{
+export default class PlayArea{
 
   constructor(scene, playground) {
     var centerX = playground.x + playground.width / 2;

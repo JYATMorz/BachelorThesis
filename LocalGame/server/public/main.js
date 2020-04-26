@@ -1,3 +1,6 @@
+import LoginPage from './assets/scenes/login.js';
+import PlayGame from './assets/scenes/play.js';
+
 window.addEventListener('load', function() {
 
 	var config = {
@@ -12,10 +15,11 @@ window.addEventListener('load', function() {
 				debug: false
 			}
 		},
-		// fps: {
-	  //   target: 60,
-	  //   forceSetTimeOut: true
-		// },
+		fps: {
+			min: 25,
+	    target: 25,
+	    forceSetTimeOut: true
+		},
 		scale: {
 			mode: Phaser.Scale.FIT,
 			autoCenter: Phaser.Scale.CENTER_BOTH

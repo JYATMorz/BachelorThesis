@@ -1,4 +1,4 @@
-class Ball extends Phaser.Physics.Arcade.Image {
+export default class Ball extends Phaser.Physics.Arcade.Image {
   constructor(scene, playground) {
     super(scene, playground.x + playground.width / 2,
       playground.y + playground.height / 2, 'ball');
@@ -9,7 +9,7 @@ class Ball extends Phaser.Physics.Arcade.Image {
     this.setScale(0.5);
     this.body.setCircle(50);
 		this.body.setBounce(1);
-		this.body.setMass(1);
+		this.body.setMass(5);
 		this.body.setCollideWorldBounds(true);
     this.body.setBoundsRectangle(
       new Phaser.Geom.Rectangle(

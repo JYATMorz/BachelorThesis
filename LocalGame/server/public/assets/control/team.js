@@ -1,4 +1,6 @@
-class PlayerTeam {
+import SoccerPlayer from './player.js';
+
+export default class PlayerTeam {
 
   constructor(scene, playground, num) {
     var teamConfig = this.stepPosition(playground, num);
@@ -108,7 +110,9 @@ class PlayerTeam {
 
   updateNameText(nickname) {
     this.playerUp.name.setText(nickname + ' 1');
+    this.playerUp.updateNameLocation(this.playerUp.x, this.playerUp.y);
     this.playerDown.name.setText(nickname + ' 2');
+    this.playerDown.updateNameLocation(this.playerDown.x, this.playerDown.y);
   }
 
   shoot(socket) {
@@ -133,12 +137,12 @@ class PlayerTeam {
   resetPosition(playground, stepY, num) {
     var stepX = this.stepPosition(playground, num).stepX;
 
-    playerUp.setPosition(playground.x + playground.width * stepX,
+    this.playerUp.setPosition(playground.x + playground.width * stepX,
       playground.y + playground.height * stepY);
-    playerUp.updateNameLocation(playerUp.x, playerUp.y);
+    this.playerUp.updateNameLocation(this.playerUp.x, this.playerUp.y);
 
-    playerDown.setPosition(layground.x + playground.width * stepX,
+    this.playerDown.setPosition(playground.x + playground.width * stepX,
       playground.y + playground.height * (1 - stepY));
-    playerDown.updateNameLocation(playerDown.x, playerDown.y);
+    this.playerDown.updateNameLocation(this.playerDown.x, this.playerDown.y);
   }
 }
