@@ -45,7 +45,6 @@ for (var i = 0; i < 4; i++) {
     teamNum: i,
     startReady: false,
     turnReady: false,
-    goalReady: false
   });
 };
 
@@ -125,7 +124,6 @@ function create() {
             teamNum: i,
             startReady: false,
             turnReady: false,
-            goalReady: false
           });
           userStatus.userNum --;
           break;
@@ -143,7 +141,7 @@ function create() {
         var aliveUser = {};
         for (var i = 0; i < userStatus.users.length; i++) {
           if (userStatus.users[i].userSocketID !== null) {
-            aliveUser.socket = io.sockets.connected[users[i].userSocketID];
+            aliveUser.socket = io.sockets.connected[userStatus.users[i].userSocketID];
             aliveUser.user = userStatus.users[i];
             break;
           }
@@ -154,9 +152,6 @@ function create() {
           if (gameStatus.waitNextTurn && gameStatus.turnReady) {
             allNextTest(aliveUser.socket, aliveUser.user.turnReady);
           }
-          if (gameStatus.goalReady && aliveUser.user.goalReady) {
-            allGoalTest(aliveUser.socket, aliveUser.user.goalReady);
-          }
         }
       }
     });
@@ -166,27 +161,27 @@ function create() {
     });
 
     socket.on('toShootBall', function(playerData) {
-      gameStatus.waitNextTurn = true;
-      shootBall(playerData.teamID, playerData.playerID,
-        playerData.speed.x * gameSetting.shootSpeed,
-        playerData.speed.y * gameSetting.shootSpeed);
+      if (socket.id === playerData.socketID) {
+        gameStatus.waitNextTurn = true;
+        shootBall(playerData.teamID, playerData.playerID,
+          playerData.speed.x * gameSetting.shootSpeed,
+          playerData.speed.y * gameSetting.shootSpeed);
+      } else {
+        console.log('Not correct user !');
+      }
     });
 
     socket.on('toNextRound', function(turnReady) {
       allNextTest(socket, turnReady);
     });
 
-    socket.on('toGoal', function(teamString) {
-      allGoalTest(socket, teamString);
-    });
-
   });
 }
 
 function update(time) {
-  if (gameStatus.gameStart && !gameStatus.goalReady && gameStatus.waitNextTurn) {
+  if (gameStatus.gameStart && !gameStatus.goalReady && !gameStatus.turnReady) {
     var syncData = {
-      init: false,
+      goal: false,
       time: Date.now(),
       position: getAllObjPosition()
     };
@@ -257,7 +252,7 @@ function noMovingImgs() {
   }
 }
 
-function ballGoal(goalTeam) {
+function ballGoal(teamString) {
   gameStatus.gameStart = false;
   gameStatus.goalReady = true;
   ball.body.stop();
@@ -268,7 +263,7 @@ function ballGoal(goalTeam) {
     team.isSelectedTeam = false;
   });
   var syncData = {
-    init: true,
+    goal: true,
     time: Date.now(),
     position: getAllObjPosition()
   };
@@ -281,6 +276,20 @@ function ballGoal(goalTeam) {
   } else {
     console.log('Game Error! Unknown Team!');
   }
+
+  setTimeout(function() {
+    resetAllPosition();
+    gameStatus.gameTurn = gameStatus.gameScore.blue + gameStatus.gameScore.red;
+    gameStatus.goalReady = false;
+    gameStatus.gameStart = true;
+    var syncData = {
+      goal: false,
+      time: Date.now(),
+      position: getAllObjPosition()
+    };
+    io.emit('syncPosition', syncData);
+    io.emit('afterGoal', gameStatus);
+  }, 5000);
 }
 
 function allStartTest(socket, startReady) {
@@ -326,35 +335,9 @@ function allNextTest(socket, turnReady) {
       user.turnReady = false;
     });
 
-    requestAI();
-  }
-}
-
-function allGoalTest(socket, goalReady) {
-  var allGoalMessage = true;
-  userStatus.users.forEach((user) => {
-    if (user.userSocketID === socket.id ||
-        user.userSocketID === null) {
-      user.goalReady = goalReady;
-    }
-    allGoalMessage = allGoalMessage && user.goalReady;
-  });
-
-  if (allGoalMessage) {
-    gameStatus.gameTurn = gameStatus.gameScore.blue + gameStatus.gameScore.red - 1;
-    gameStatus.goalReady = false;
     setTimeout(function() {
-      var syncData = {
-        init: true,
-        time: Date.now(),
-        position: getAllObjPosition()
-      };
-      io.emit('syncPosition', syncData);
-      io.emit('afterGoal', gameStatus);
+      requestAI();
     }, 5000);
-    userStatus.users.forEach((user) => {
-      user.goalReady = false;
-    });
   }
 }
 
@@ -363,17 +346,7 @@ function requestAI() {
   if (userStatus.users[teamNum].userSocketID === null) {
     gameStatus.waitNextTurn = true;
     var dumbAI = simpleAI(getAllObjPosition(), teamNum);
-    var playerData = {
-      socketID: null,
-      teamID: teamNum,
-      playerID: dumbAI.playerID,
-      speed: dumbAI.speed,
-      waitNextTurn: gameStatus.waitNextTurn
-    };
-    setTimeout(function() {
-      shootBall(playerData.teamID, playerData.playerID,
-        playerData.speed.x, playerData.speed.y);
-    }, 5000);
+    shootBall(teamNum, dumbAI.playerID, dumbAI.speed.x, dumbAI.speed.y);
   }
 }
 
@@ -405,8 +378,8 @@ function simpleAI(position, teamNum) {
   } else {
     var shootAngle = Math.atan((ballPos.y - doorPos.y), (ballPos.x - doorPos.x));
     var targetPos = {
-      x: ballPos.x + Math.cos(shootAngle) * 50,
-      y: ballPos.y + Math.sin(shootAngle) * 50
+      x: ballPos.x + Math.cos(shootAngle) * 55,
+      y: ballPos.y + Math.sin(shootAngle) * 55
     };
     playerToTarget =
       Math.atan2((targetPos.y - playerPos.y), (targetPos.x - playerPos.x));

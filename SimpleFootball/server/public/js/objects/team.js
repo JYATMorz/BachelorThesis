@@ -122,22 +122,34 @@ export default class PlayerTeam {
   }
 
   shoot(socket) {
-    this.arrow.setVisible(false);
-    this.getChildren().forEach((player, i) => {
-      if (player.isSelectedPlayer && socket.id === this.userSocketID) {
-        var angle = this.arrow.rotation;
-        var force = this.arrow.scaleX;
-        var speed = new Phaser.Math.Vector2();
-        speed.setToPolar(angle, force);
+    if (!this.arrow.visible) {
+      socket.emit('toShootBall', {
+        socketID: this.userSocketID,
+        teamID: this.teamNum,
+        playerID: 0,
+        speed: {x: 0, y: 0}
+      });
+    } else {
+      this.arrow.setVisible(false);
+      this.getChildren().forEach((player, i) => {
+        if (player.isSelectedPlayer && socket.id === this.userSocketID) {
+          var angle = this.arrow.rotation;
+          var force = this.arrow.scaleX;
+          var speed = new Phaser.Math.Vector2();
+          speed.setToPolar(angle, force);
 
-        socket.emit('toShootBall', {
-          socketID: this.userSocketID,
-          teamID: this.teamNum,
-          playerID: i,
-          speed: speed
-        });
-      }
-    });
+          socket.emit('toShootBall', {
+            socketID: this.userSocketID,
+            teamID: this.teamNum,
+            playerID: i,
+            speed: speed
+          });
+        }
+      });
+    }
+    this.isSelectedTeam = false;
+    this.playerUp.isSelectedPlayer = false;
+    this.playerDown.isSelectedPlayer = false;
   }
 
 }

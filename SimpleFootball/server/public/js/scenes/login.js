@@ -88,7 +88,7 @@ export default class LoginPage extends Phaser.Scene {
         }
       });
       if (this.nickname.join('') === '') {
-        this.scene.start('playGame', {userName: 'NoOne'});
+        this.scene.start('playGame', {userName: '?????'});
       } else {
         this.scene.start('playGame', {userName: this.nickname.join('')});
       }

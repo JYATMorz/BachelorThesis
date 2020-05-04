@@ -9,7 +9,7 @@ export default class PlayGame extends Phaser.Scene {
   init(data) {
     this.myUsername = data.userName;
     this.lastTimeStamp = 0;
-
+    this.myTeamNum = null;
     this.waitStart = false;
     this.gameStart = false;
     this.gameTurn = 0;
@@ -38,6 +38,7 @@ export default class PlayGame extends Phaser.Scene {
     this.load.image('playground', 'assets/image/playground_1.png');
     this.load.image('goalnet', 'assets/image/playground_2.png');
     this.load.image('goalpost', 'assets/image/playground_3.png');
+    this.load.image('goaltext', 'assets/image/goal.png');
     this.load.bitmapFont('bitter_bmf', 'assets/bitmapFont/bitter.png', 'assets/bitmapFont/bitter.xml');
 	}
 
@@ -49,8 +50,9 @@ export default class PlayGame extends Phaser.Scene {
       var myGameData = {userName: self.myUsername};
 
       self.gameArea = gameData.gameArea;
+      self.myTeamNum = gameData.teamNum;
       self.updateGameStatus(gameData.gameStatus);
-      self.setAllPosition(gameData.objPosition, 0, true);
+      self.setAllPosition(gameData.objPosition, false);
 
       callback(myGameData);
     });
@@ -59,7 +61,7 @@ export default class PlayGame extends Phaser.Scene {
     if (this.gameArea !== null) {
       this.background = new PlayArea(this, this.gameArea);
 
-      this.ball = this.physics.add.image(
+      this.ball = this.add.image(
         this.gameArea.x + this.gameArea.width / 2,
         this.gameArea.y + this.gameArea.height / 2,
         'ball').setScale(0.5);
@@ -69,19 +71,6 @@ export default class PlayGame extends Phaser.Scene {
       this.teams[1] = new PlayerTeam(this, this.gameArea, 1);
       this.teams[2] = new PlayerTeam(this, this.gameArea, 2);
       this.teams[3] = new PlayerTeam(this, this.gameArea, 3);
-
-      this.physics.add.overlap(
-        this.ball, this.background.goalNet.left, function() {
-          if (scene.gameStart) {
-            scene.playerGoal('red');
-          }
-        });
-      this.physics.add.overlap(
-        this.ball, this.background.goalNet.right, function() {
-          if (scene.gameStart) {
-            scene.playerGoal('red');
-          }
-        });
     }
 
     this.startText = this.add.text(20, 400, 'Start !\n0/4', this.generalFont);
@@ -96,9 +85,8 @@ export default class PlayGame extends Phaser.Scene {
     this.shootText = this.add.text(1020, 400, 'Shoot !', this.generalFont);
     this.shootText.setInteractive();
     this.shootText.on('pointerup', function() {
-      if (this.gameStart) {
-        var currentTeamNum = this.gameTurn % 4;
-        this.teams[currentTeamNum].shoot(this.socket);
+      if (this.gameStart && this.teams[this.myTeamNum].isSelectedTeam) {
+        this.teams[this.myTeamNum].shoot(this.socket);
       }
     }, this);
 
@@ -129,6 +117,36 @@ export default class PlayGame extends Phaser.Scene {
       .strokeRectShape(this.noteText.getBounds())
       .lineStyle(3, 0xffffff);
 
+    this.particles = this.add.particles('ball');
+    this.goalText = this.add.image(600, 300, 'goaltext').setVisible(false);
+    this.goalSquare = this.particles.createEmitter({
+      x: {min: 500, max: 700},
+      y: {min: 275, max: 325},
+      lifespan: 4000,
+      speed: {min: 400, max: 650},
+      angle: {min: 210, max: 330},
+      gravityY: 500,
+      scale: { start: 0.2, end: 0 },
+      quantity: 4,
+      blendMode: 'ADD',
+      tint: [0x00d1ff, 0xffed00, 0xff0000],
+      on: false
+    });
+    this.goalRain = this.particles.createEmitter({
+      speed: 0,
+      lifespan: 750,
+      quantity: 2,
+      scale: 0.1,
+      blendMode: 'SCREEN',
+      tint: 0xf6ff4d,
+      emitZone: {
+        type: 'edge',
+        source: this.goalText.getBounds(),
+        quantity: 50
+      },
+      on: false
+    });
+
     // socket.io methods
     this.socket.once('currentStates', function(users) {
       users.forEach((user, i) => {
@@ -137,7 +155,9 @@ export default class PlayGame extends Phaser.Scene {
       self.noteText.setText('Game Loaded');
 
       if (self.gameStart) {
-        self.teams[self.gameTurn % 4].isSelectedTeam = true;
+        if (self.teams[self.gameTurn % 4].userSocketID === self.socket.id) {
+          self.teams[self.gameTurn % 4].isSelectedTeam = true;
+        }
         self.startText.setText('Team:' + ((self.gameTurn % 4) + 1).toString());
         if (self.socket.id === self.teams[self.gameTurn % 4].userSocketID) {
           self.noteText.setText('Your Turn');
@@ -169,7 +189,9 @@ export default class PlayGame extends Phaser.Scene {
     });
 
     this.socket.once('startingGame', function() {
-      self.teams[0].isSelectedTeam = true;
+      if (self.teams[0].userSocketID === self.socket.id) {
+        self.teams[0].isSelectedTeam = true;
+      }
       self.startText.setText('Team:' + (self.gameTurn + 1).toString());
       self.gameStart = true;
       self.noteText.setText('Game Start');
@@ -183,22 +205,36 @@ export default class PlayGame extends Phaser.Scene {
 
     this.socket.on('syncPosition', function(syncData) {
       if (self.lastTimeStamp < syncData.time) {
-        var deltaTime = syncData.time - self.lastTimeStamp;
-        self.setAllPosition(syncData.position, deltaTime, syncData.init);
+        self.setAllPosition(syncData.position, syncData.goal);
         self.lastTimeStamp = syncData.time;
+      }
+      if (syncData.goal) {
+        self.noteText.setText('Goal !!!');
+
+        self.goalRain.start();
+        self.goalSquare.start();
+        self.goalText.setVisible(true);
+        setTimeout(function() {
+          self.goalRain.stop();
+          self.goalSquare.stop();
+          self.goalText.setVisible(false);
+        }, 4000);
       }
     });
 
     this.socket.on('nextTurnReady', function(turnData) {
-      self.setAllPosition(turnData.position, (Date.now() - turnData.time), false);
+      self.setAllPosition(turnData.position, false);
       self.socket.emit('toNextRound', true);
     });
 
     this.socket.on('goNextRound', function(gameStatus) {
-      self.waitNextTurn = gameStatus.waitNextTurn;
       self.gameTurn = gameStatus.gameTurn;
       var nextTeamNum = self.gameTurn % 4;
-      self.teams[nextTeamNum].isSelectedTeam = true;
+      if (self.teams[nextTeamNum].userSocketID === self.socket.id) {
+        self.teams[nextTeamNum].isSelectedTeam = true;
+      } else if (self.teams[nextTeamNum].userSocketID !== null) {
+        self.waitNextTurn = gameStatus.waitNextTurn;
+      }
       self.startText.setText('Team:' + (nextTeamNum + 1).toString());
       self.sendNextTurn = false;
 
@@ -212,9 +248,8 @@ export default class PlayGame extends Phaser.Scene {
     this.socket.on('afterGoal', function(gameStatus) {
       self.noteText.setText('Game Resume');
       self.updateGameStatus(gameStatus);
+      self.socket.emit('toNextRound', true);
     });
-
-
 
 	}
 
@@ -228,23 +263,6 @@ export default class PlayGame extends Phaser.Scene {
     }
 
 	}
-
-  /*
-  * tell server the client is waiting for goal result
-  */
-  playerGoal(teamString) {
-    this.gameStart = false;
-
-    if (teamString === 'blue') {
-      this.noteText.setText('Blue Team Goal');
-    } else if (teamString === 'red') {
-      this.noteText.setText('Red Team Goal');
-    } else {
-      console.log('Game Error! Unknown Team!');
-    }
-
-    this.socket.emit('toGoal', teamString);
-  }
 
   /*
   * update game status with given data
@@ -296,22 +314,13 @@ export default class PlayGame extends Phaser.Scene {
   /*
   * set the position of 4 teams and 1 ball with given position
   */
-  setAllPosition(position, deltaTime, initial) {
-    if (initial) {
-      this.teams.forEach((team, i) => {
-        team.getChildren().forEach((player, j) => {
-          player.setPosition(position[i][j][0], position[i][j][1]);
-        });
+  setAllPosition(position, initial) {
+    this.teams.forEach((team, i) => {
+      team.getChildren().forEach((player, j) => {
+        player.setPosition(position[i][j][0], position[i][j][1]);
       });
-      this.ball.setPosition(position[4][0], position[4][1]);
-    } else {
-      this.teams.forEach((team, i) => {
-        team.getChildren().forEach((player, j) => {
-          this.physics.moveTo(player, position[i][j][0], position[i][j][1], 0, deltaTime);
-        });
-      });
-      this.physics.moveTo(this.ball, position[4][0], position[4][1], 0, deltaTime);
-    }
+    });
+    this.ball.setPosition(position[4][0], position[4][1]);
   }
 
 

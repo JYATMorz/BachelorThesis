@@ -8,13 +8,6 @@ window.addEventListener('load', function() {
 		width: 1200,
 		height: 600,
 		backgroundColor: 0xc4ba77,
-		physics: {
-			default: 'arcade',
-			arcade: {
-				gravity: {},
-				debug: false
-			}
-		},
 		fps: {
 			min: 25,
 	    target: 25,

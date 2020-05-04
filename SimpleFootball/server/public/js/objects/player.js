@@ -1,10 +1,9 @@
-export default class SoccerPlayer extends Phaser.Physics.Arcade.Image {
+export default class SoccerPlayer extends Phaser.GameObjects.Image {
 
   constructor(scene, x, y, gameArea) {
     super(scene, x, y, 'player');
 
     scene.add.existing(this);
-    scene.physics.add.existing(this);
 
     this.setScale(0.7);
     this.setInteractive(
