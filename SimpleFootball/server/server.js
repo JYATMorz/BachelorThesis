@@ -19,9 +19,9 @@ app.get('/', function (req, res) {
     runScripts: "dangerously",
     resources: "usable",
     pretendToBeVisual: true
-  }).then(dom => {
+  }).then((dom) => {
     dom.window.URL.createObjectURL = (object) => {
-      if (object){
+      if (object) {
         return datauri.format(object.type, object[Object.getOwnPropertySymbols(object)[0]]._buffer).content;
       }
     };
@@ -29,7 +29,7 @@ app.get('/', function (req, res) {
     dom.window.URL.revokeObjectURL = (objectURL) => {};
 
     dom.window.gameLoaded = () => {
-      server.listen(8081, function () {
+      server.listen(8081, function() {
         console.log(`Listening on ${server.address().port}`);
       });
     };

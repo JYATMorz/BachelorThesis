@@ -72,18 +72,18 @@ function create() {
   });
   this.physics.add.collider(ball, gate.getGoalPost());
 
-  this.physics.add.overlap(ball, gate.goalNet.left, function() {
+  this.physics.add.overlap(ball, gate.goalNet.left, () => {
     if (gameStatus.gameStart) {
       ballGoal('red');
     }
   });
-  this.physics.add.overlap(ball, gate.goalNet.right, function() {
+  this.physics.add.overlap(ball, gate.goalNet.right, () => {
     if (gameStatus.gameStart) {
       ballGoal('blue');
     }
   });
 
-  io.on('connect', function(socket) {
+  io.on('connect', (socket) => {
     console.log(socket.id + ' Connected...');
 
     if (userStatus.userNum < 4) {
@@ -102,7 +102,7 @@ function create() {
         }
       }
 
-      socket.emit('loginData', gameData, function(loginData) {
+      socket.emit('loginData', gameData, (loginData) => {
         userStatus.users[gameData.teamNum].userName = loginData.userName;
         socket.emit('currentStates', userStatus.users);
         socket.broadcast.emit('newUser', userStatus.users[gameData.teamNum]);
@@ -113,7 +113,7 @@ function create() {
       socket.emit('over4', socket.id);
     }
 
-    socket.on('disconnect', function() {
+    socket.on('disconnect', () => {
       console.log('...Disconnected...');
       for (var i = 0; i < userStatus.users.length; i++) {
         if (userStatus.users[i].userSocketID === socket.id) {
@@ -149,18 +149,18 @@ function create() {
         if (!gameStatus.gameStart && !gameStatus.goalReady) {
           allStartTest(aliveUser.socket, aliveUser.user.startReady);
         } else {
-          if (gameStatus.waitNextTurn && gameStatus.turnReady) {
+          if (!gameStatus.waitNextTurn && gameStatus.turnReady) {
             allNextTest(aliveUser.socket, aliveUser.user.turnReady);
           }
         }
       }
     });
 
-    socket.on('toStartGame', function(waitStart) {
+    socket.on('toStartGame', (waitStart) => {
       allStartTest(socket, waitStart);
     });
 
-    socket.on('toShootBall', function(playerData) {
+    socket.on('toShootBall', (playerData) => {
       if (socket.id === playerData.socketID) {
         gameStatus.waitNextTurn = true;
         shootBall(playerData.teamID, playerData.playerID,
@@ -171,7 +171,7 @@ function create() {
       }
     });
 
-    socket.on('toNextRound', function(turnReady) {
+    socket.on('toNextRound', (turnReady) => {
       allNextTest(socket, turnReady);
     });
 
@@ -277,7 +277,7 @@ function ballGoal(teamString) {
     console.log('Game Error! Unknown Team!');
   }
 
-  setTimeout(function() {
+  setTimeout(() => {
     resetAllPosition();
     gameStatus.gameTurn = gameStatus.gameScore.blue + gameStatus.gameScore.red;
     gameStatus.goalReady = false;
@@ -335,9 +335,7 @@ function allNextTest(socket, turnReady) {
       user.turnReady = false;
     });
 
-    setTimeout(function() {
-      requestAI();
-    }, 5000);
+    setTimeout(() => {requestAI();}, 5000);
   }
 }
 

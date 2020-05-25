@@ -15,7 +15,6 @@ export default class PlayGame extends Phaser.Scene {
     this.gameTurn = 0;
     this.gameScore = {blue: 0, red: 0};
     this.waitNextTurn = false;
-    this.sendNextTurn = false;
     this.gameArea = {
       x: 200, y: 150, width: 800, height: 400,
       position: {
@@ -45,14 +44,13 @@ export default class PlayGame extends Phaser.Scene {
 	create() {
     // socket.io methods
     this.socket = io();
-    var self = this;
-    this.socket.once('loginData', function(gameData, callback) {
-      var myGameData = {userName: self.myUsername};
+    this.socket.once('loginData', (gameData, callback) => {
+      var myGameData = {userName: this.myUsername};
 
-      self.gameArea = gameData.gameArea;
-      self.myTeamNum = gameData.teamNum;
-      self.updateGameStatus(gameData.gameStatus);
-      self.setAllPosition(gameData.objPosition, false);
+      this.gameArea = gameData.gameArea;
+      this.myTeamNum = gameData.teamNum;
+      this.updateGameStatus(gameData.gameStatus);
+      this.setAllPosition(gameData.objPosition, false);
 
       callback(myGameData);
     });
@@ -148,107 +146,106 @@ export default class PlayGame extends Phaser.Scene {
     });
 
     // socket.io methods
-    this.socket.once('currentStates', function(users) {
+    this.socket.once('currentStates', (users) => {
       users.forEach((user, i) => {
-        self.updateUser(user);
+        this.updateUser(user);
       });
-      self.noteText.setText('Game Loaded');
+      this.noteText.setText('Game Loaded');
 
-      if (self.gameStart) {
-        if (self.teams[self.gameTurn % 4].userSocketID === self.socket.id) {
-          self.teams[self.gameTurn % 4].isSelectedTeam = true;
+      if (this.gameStart) {
+        if (this.teams[this.gameTurn % 4].userSocketID === this.socket.id) {
+          this.teams[this.gameTurn % 4].isSelectedTeam = true;
         }
-        self.startText.setText('Team:' + ((self.gameTurn % 4) + 1).toString());
-        if (self.socket.id === self.teams[self.gameTurn % 4].userSocketID) {
-          self.noteText.setText('Your Turn');
+        this.startText.setText('Team:' + ((this.gameTurn % 4) + 1).toString());
+        if (this.socket.id === this.teams[this.gameTurn % 4].userSocketID) {
+          this.noteText.setText('Your Turn');
         } else {
-          self.noteText.setText("Other User's Turn");
+          this.noteText.setText("Other User's Turn");
         }
       }
     });
 
-    this.socket.on('newUser', function(user) {
-      self.updateUser(user);
-      self.noteText.setText('New User Connected');
+    this.socket.on('newUser', (user) => {
+      this.updateUser(user);
+      this.noteText.setText('New User Connected');
     });
 
-    this.socket.on('over4', function(id) {
-      if (id === self.socket.id) {
-        self.noteText.setText('Error:\nToo Many Users\nRetry Later');
+    this.socket.on('over4', (id) => {
+      if (id === this.socket.id) {
+        this.noteText.setText('Error:\nToo Many Users\nRetry Later');
       }
     });
 
-    this.socket.on('waitingGame', function(allStartReady) {
-      if (self.waitStart) {
-        self.startText.setText('Waiting\n' + allStartReady + '/4');
-        self.noteText.setText('Waiting For Other Users');
+    this.socket.on('waitingGame', (allStartReady) => {
+      if (this.waitStart) {
+        this.startText.setText('Waiting\n' + allStartReady + '/4');
+        this.noteText.setText('Waiting For Other Users');
       } else {
-        self.startText.setText('Start !\n' + allStartReady + '/4');
-        self.noteText.setText('Please Start The Game');
+        this.startText.setText('Start !\n' + allStartReady + '/4');
+        this.noteText.setText('Please Start The Game');
       }
     });
 
-    this.socket.once('startingGame', function() {
-      if (self.teams[0].userSocketID === self.socket.id) {
-        self.teams[0].isSelectedTeam = true;
+    this.socket.once('startingGame', () => {
+      if (this.teams[0].userSocketID === this.socket.id) {
+        this.teams[0].isSelectedTeam = true;
       }
-      self.startText.setText('Team:' + (self.gameTurn + 1).toString());
-      self.gameStart = true;
-      self.noteText.setText('Game Start');
+      this.startText.setText('Team:' + (this.gameTurn + 1).toString());
+      this.gameStart = true;
+      this.noteText.setText('Game Start');
     });
 
-    this.socket.on('playerDown', function(teamNum) {
-      self.teams[teamNum].userSocketID = null;
-      self.teams[teamNum].updateNameText('Team' + (teamNum + 1));
-      self.noteText.setText('One User Disconnected');
+    this.socket.on('playerDown', (teamNum) => {
+      this.teams[teamNum].userSocketID = null;
+      this.teams[teamNum].updateNameText('Team' + (teamNum + 1));
+      this.noteText.setText('One User Disconnected');
     });
 
-    this.socket.on('syncPosition', function(syncData) {
-      if (self.lastTimeStamp < syncData.time) {
-        self.setAllPosition(syncData.position, syncData.goal);
-        self.lastTimeStamp = syncData.time;
+    this.socket.on('syncPosition', (syncData) => {
+      if (this.lastTimeStamp < syncData.time) {
+        this.setAllPosition(syncData.position, syncData.goal);
+        this.lastTimeStamp = syncData.time;
       }
       if (syncData.goal) {
-        self.noteText.setText('Goal !!!');
+        this.noteText.setText('Goal !!!');
 
-        self.goalRain.start();
-        self.goalSquare.start();
-        self.goalText.setVisible(true);
-        setTimeout(function() {
-          self.goalRain.stop();
-          self.goalSquare.stop();
-          self.goalText.setVisible(false);
+        this.goalRain.start();
+        this.goalSquare.start();
+        this.goalText.setVisible(true);
+        setTimeout(() => {
+          this.goalRain.stop();
+          this.goalSquare.stop();
+          this.goalText.setVisible(false);
         }, 4000);
       }
     });
 
-    this.socket.on('nextTurnReady', function(turnData) {
-      self.setAllPosition(turnData.position, false);
-      self.socket.emit('toNextRound', true);
+    this.socket.on('nextTurnReady', (turnData) => {
+      this.setAllPosition(turnData.position, false);
+      this.socket.emit('toNextRound', true);
     });
 
-    this.socket.on('goNextRound', function(gameStatus) {
-      self.gameTurn = gameStatus.gameTurn;
-      var nextTeamNum = self.gameTurn % 4;
-      if (self.teams[nextTeamNum].userSocketID === self.socket.id) {
-        self.teams[nextTeamNum].isSelectedTeam = true;
-      } else if (self.teams[nextTeamNum].userSocketID !== null) {
-        self.waitNextTurn = gameStatus.waitNextTurn;
+    this.socket.on('goNextRound', (gameStatus) => {
+      this.gameTurn = gameStatus.gameTurn;
+      var nextTeamNum = this.gameTurn % 4;
+      if (this.teams[nextTeamNum].userSocketID === this.socket.id) {
+        this.teams[nextTeamNum].isSelectedTeam = true;
+      } else if (this.teams[nextTeamNum].userSocketID !== null) {
+        this.waitNextTurn = gameStatus.waitNextTurn;
       }
-      self.startText.setText('Team:' + (nextTeamNum + 1).toString());
-      self.sendNextTurn = false;
+      this.startText.setText('Team:' + (nextTeamNum + 1).toString());
 
-      if (self.socket.id === self.teams[nextTeamNum].userSocketID) {
-        self.noteText.setText('Your Turn');
+      if (this.socket.id === this.teams[nextTeamNum].userSocketID) {
+        this.noteText.setText('Your Turn');
       } else {
-        self.noteText.setText("Other User's Turn");
+        this.noteText.setText("Other User's Turn");
       }
     });
 
-    this.socket.on('afterGoal', function(gameStatus) {
-      self.noteText.setText('Game Resume');
-      self.updateGameStatus(gameStatus);
-      self.socket.emit('toNextRound', true);
+    this.socket.on('afterGoal', (gameStatus) => {
+      this.noteText.setText('Game Resume');
+      this.updateGameStatus(gameStatus);
+      this.socket.emit('toNextRound', true);
     });
 
 	}
