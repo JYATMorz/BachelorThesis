@@ -1,0 +1,20 @@
+{
+  "name": "SimpleFootball",
+  "version": "1.0.0",
+  "description": "SimpleFootball with a packaged server",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-packager ."
+  },
+  "author": "Huang Zili",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^9.0.0",
+    "electron-packager": "^14.2.1"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
+  }
+}
