@@ -12,6 +12,7 @@ function createWindow () {
     },
     backgroundColor: '#202232'
   });
+  mainWindow.removeMenu();
   mainWindow.loadFile('server/server.html');
 }
 
