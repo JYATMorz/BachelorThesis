@@ -1,6 +1,4 @@
 .metadata/
 node_modules/
-package.json
-package-lock.json
 .project
 SimpleFootball-win32-x64/
