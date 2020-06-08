@@ -3,7 +3,7 @@ Student ID: 318734
 Thesis title: Development of a cross-platform client-server architecture using HTML5 and NodeJS
 
 Folder structure:
-Final Submission/
+Final Submission Huang Zili/
 ├── BA Thesis_HuangZili.pdf ==> The digital version of the bachelor thesis
 ├── Eidesstattliche_Versicherung_HuangZili.pdf ==> Signed statement under oath
 ├── readme.txt ==> This file
